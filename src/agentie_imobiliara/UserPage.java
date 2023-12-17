@@ -6,6 +6,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Vector;
 
 import javax.swing.JFrame;
@@ -14,19 +15,40 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
+
+import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Container;
+import java.awt.Dimension;
+
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingConstants;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 
 import java.awt.Font;
+import java.awt.GridLayout;
+
 import javax.swing.JTextField;
 import java.awt.event.ActionListener;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.awt.event.ActionEvent;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+
+import com.opencsv.CSVWriter;
+
 
 /**
  * Clasa aceasta reprezinta fereastra de User.
@@ -172,6 +194,7 @@ public class UserPage extends JFrame {
 				}
 				DefaultTableModel model = new DefaultTableModel(data, columnNames);
 				table = new JTable(model);
+				table.setAutoCreateRowSorter(true);
 				
 				ListSelectionModel model1 = table.getSelectionModel();
 				model1.addListSelectionListener(new ListSelectionListener() {
@@ -612,6 +635,230 @@ public class UserPage extends JFrame {
 		btnClearFields.setFont(new Font("Tahoma", Font.BOLD, 15));
 		btnClearFields.setBounds(535, 500, 144, 46);
 		contentPane.add(btnClearFields);
+		
+		JButton btnExport = new JButton("Export");
+		btnExport.setFont(new Font("Tahoma", Font.BOLD, 15));
+		btnExport.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				// code to export data from JTable
+
+			    try {
+			    	
+			    	String[] options = {"PDF", "CSV"};
+			        int choice = JOptionPane.showOptionDialog(null, "Select export type:", "Export", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, options, options[0]);
+
+
+			        if(choice == 0) {
+			        	PDDocument document = new PDDocument();
+				        PDPage page = new PDPage();
+				        document.addPage(page);
+
+				        PDPageContentStream contentStream = new PDPageContentStream(document, page);
+
+				        int rows = table.getRowCount();
+				        int cols = table.getColumnCount();
+
+				        float margin = 10;
+				        float yStart = page.getMediaBox().getHeight() - margin;
+				        float tableWidth = page.getMediaBox().getWidth() - 2 * margin;
+				        float tableHeight = table.getRowHeight() * (rows + 1);
+
+				        float yPosition = yStart;
+
+				        float marginB = 70;
+				        float cellMargin = 5f;
+
+				     // Draw table headers
+				        float nextyStart = yStart - tableHeight - marginB;
+				        contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.COURIER), 15);
+				        float nextxStart = margin + cellMargin;
+			            
+				        for (int i = 0; i < cols; i++) {
+				            float colWidth = table.getColumnModel().getColumn(i).getWidth();
+				            if(colWidth == 200.0) {
+				            	colWidth = (float) 150.0;
+				            }
+				            else if(colWidth == 90.0) {
+				            	colWidth = (float) 120.0;
+				            }
+				            else if(colWidth == 69.0) {
+				            	colWidth = (float) 100.0;
+				            }
+				            //nextyStart -= table.getRowHeight();
+
+				            contentStream.beginText();
+				            contentStream.newLineAtOffset(nextxStart, nextyStart);
+				            contentStream.showText(table.getColumnName(i));
+				            contentStream.endText();
+				            nextxStart += colWidth + cellMargin;
+				        }
+
+				     // Draw table content
+				        for (int i = 0; i < rows; i++) {
+				            float nextyStartContent = yStart - tableHeight - marginB - (i + 1) * table.getRowHeight();
+				            float nextxStart1 = margin + cellMargin;  // Reset x-coordinate for each row
+
+				            for (int j = 0; j < cols; j++) {
+				                float colWidth = table.getColumnModel().getColumn(j).getWidth();
+				                
+				                if(colWidth == 200.0) {
+					            	colWidth = (float) 150.0;
+					            }
+					            else if(colWidth == 90.0) {
+					            	colWidth = (float) 120.0;
+					            }
+					            else if(colWidth == 69.0) {
+					            	colWidth = (float) 100.0;
+					            }
+				                
+				                String text = table.getValueAt(i, j).toString();
+				                contentStream.beginText();
+				                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.COURIER), 15);
+				                contentStream.newLineAtOffset(nextxStart1, nextyStartContent);
+				                contentStream.showText(text);
+				                contentStream.endText();
+
+				                nextxStart1 += colWidth + cellMargin;  // Increment x-coordinate for the next cell
+				            }
+				        }
+
+				        contentStream.close();
+
+				        // Save the document to a file
+				        document.save("date_imobile.pdf");
+				        document.close();
+
+				        JOptionPane.showMessageDialog(null, "Table data exported to PDF successfully.");
+
+				        
+			        } else if(choice == 1) {
+			        	// Execute the CSV export code
+			        	CSVWriter csvWriter = new CSVWriter(new FileWriter("date_imobile.csv"));
+			        	String[] headers = {"Id", "Location", "Type", "Price", "State", "Surface"};
+			        	csvWriter.writeNext(headers);
+
+			        	for (int i = 0; i < table.getRowCount(); i++) {
+			        	    String[] rowData = new String[table.getColumnCount()];
+			        	    for (int j = 0; j < table.getColumnCount(); j++) {
+			        	        rowData[j] = table.getValueAt(i, j).toString();
+			        	    }
+			        	    csvWriter.writeNext(rowData);
+			        	}
+
+			        	csvWriter.close();
+			        	JOptionPane.showMessageDialog(null, "Table data exported to CSV successfully.");
+			        }
+			         
+			        /*PDDocument document = new PDDocument();
+			        PDPage page = new PDPage();
+			        document.addPage(page);
+
+			        PDPageContentStream contentStream = new PDPageContentStream(document, page);
+
+			        int rows = table.getRowCount();
+			        int cols = table.getColumnCount();
+
+			        float margin = 10;
+			        float yStart = page.getMediaBox().getHeight() - margin;
+			        float tableWidth = page.getMediaBox().getWidth() - 2 * margin;
+			        float tableHeight = table.getRowHeight() * (rows + 1);
+
+			        float yPosition = yStart;
+
+			        float marginB = 70;
+			        float cellMargin = 5f;
+
+			     // Draw table headers
+			        float nextyStart = yStart - tableHeight - marginB;
+			        contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.COURIER), 15);
+			        float nextxStart = margin + cellMargin;
+		            
+			        for (int i = 0; i < cols; i++) {
+			            float colWidth = table.getColumnModel().getColumn(i).getWidth();
+			            if(colWidth == 200.0) {
+			            	colWidth = (float) 150.0;
+			            }
+			            else if(colWidth == 90.0) {
+			            	colWidth = (float) 120.0;
+			            }
+			            else if(colWidth == 69.0) {
+			            	colWidth = (float) 100.0;
+			            }
+			            //nextyStart -= table.getRowHeight();
+
+			            contentStream.beginText();
+			            contentStream.newLineAtOffset(nextxStart, nextyStart);
+			            contentStream.showText(table.getColumnName(i));
+			            contentStream.endText();
+			            nextxStart += colWidth + cellMargin;
+			        }
+
+			     // Draw table content
+			        for (int i = 0; i < rows; i++) {
+			            float nextyStartContent = yStart - tableHeight - marginB - (i + 1) * table.getRowHeight();
+			            float nextxStart1 = margin + cellMargin;  // Reset x-coordinate for each row
+
+			            for (int j = 0; j < cols; j++) {
+			                float colWidth = table.getColumnModel().getColumn(j).getWidth();
+			                
+			                if(colWidth == 200.0) {
+				            	colWidth = (float) 150.0;
+				            }
+				            else if(colWidth == 90.0) {
+				            	colWidth = (float) 120.0;
+				            }
+				            else if(colWidth == 69.0) {
+				            	colWidth = (float) 100.0;
+				            }
+			                
+			                String text = table.getValueAt(i, j).toString();
+			                contentStream.beginText();
+			                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.COURIER), 15);
+			                contentStream.newLineAtOffset(nextxStart1, nextyStartContent);
+			                contentStream.showText(text);
+			                contentStream.endText();
+
+			                nextxStart1 += colWidth + cellMargin;  // Increment x-coordinate for the next cell
+			            }
+			        }
+
+			        contentStream.close();
+
+			        // Save the document to a file
+			        document.save("date_imobile.pdf");
+			        document.close();
+
+			        JOptionPane.showMessageDialog(null, "Table data exported to PDF successfully.");
+*/
+			        
+			    } catch (IOException ex) {
+			        ex.printStackTrace();
+			    }
+			}
+		});
+		btnExport.setBounds(585, 437, 94, 46);
+		contentPane.add(btnExport);
+		
+		JButton btnView = new JButton("View");
+		btnView.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				int selectedRow = table.getSelectedRow();
+                // Open a new window or perform any action based on the selected row
+                // Example: Open a new window
+                if (selectedRow != -1) {
+                	Object[] rowData = new Object[table.getColumnCount()]; // Assuming table is the name of your JTable
+                	for (int i = 0; i < table.getColumnCount(); i++) {
+                	    rowData[i] = table.getValueAt(selectedRow, i);
+                	}
+                    String[] columnNames = {"Id", "Location", "Type", "Price", "State", "Surface"};
+                	String type = "imobil";
+                	new RowDetailsWindow(rowData, type, columnNames);
+                }
+			}
+		});
+		btnView.setFont(new Font("Tahoma", Font.BOLD, 15));
+		btnView.setBounds(150, 436, 94, 46);
+		contentPane.add(btnView);
 		
 	}
 }
