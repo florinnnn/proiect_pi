@@ -17,6 +17,7 @@ import java.awt.Font;
 import javax.swing.JButton;
 import java.awt.event.ActionListener;
 import java.beans.Statement;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -24,6 +25,7 @@ import java.sql.SQLException;
 import java.awt.event.ActionEvent;
 import javax.swing.JToggleButton;
 import java.awt.Color;
+
 /**
  * Clasa aceasta reprezinta fereastra de Login.
  * Fereastra permite crearea unui nou cont sau
@@ -55,8 +57,10 @@ public class LoginPage extends JFrame{
 	 * Indica spre locul unde se introduce parola.
 	 */
 	private JLabel passwordLB;
-
 	
+	private JTextField emailField;
+	
+	private JLabel emailLB;
 	/**
 	 * Launch the application.
 	 */
@@ -115,6 +119,15 @@ public class LoginPage extends JFrame{
 		userLogin.getContentPane().add(usernameField);
 		usernameField.setColumns(10);
 		
+		emailField = new JTextField();
+		emailField.setHorizontalAlignment(SwingConstants.CENTER);
+		emailField.setForeground(new Color(240, 237, 238));
+		emailField.setFont(new Font("Tahoma", Font.PLAIN, 12));
+		emailField.setColumns(10);
+		emailField.setBackground(new Color(44, 102, 110));
+		emailField.setBounds(145, 145, 110, 28);
+		userLogin.getContentPane().add(emailField);
+		
 		JLabel loginLB = new JLabel("Login");
 		loginLB.setFont(new Font("Tahoma", Font.BOLD, 20));
 		loginLB.setHorizontalAlignment(SwingConstants.CENTER);
@@ -125,13 +138,13 @@ public class LoginPage extends JFrame{
 		typeLB.setToolTipText("");
 		typeLB.setHorizontalAlignment(SwingConstants.CENTER);
 		typeLB.setFont(new Font("Tahoma", Font.BOLD, 14));
-		typeLB.setBounds(20, 146, 118, 28);
+		typeLB.setBounds(20, 175, 118, 28);
 		userLogin.getContentPane().add(typeLB);
 		
 		final JToggleButton typeBTN = new JToggleButton("Admin");
 		typeBTN.setForeground(new Color(255, 255, 255));
 		typeBTN.setUI(new MetalToggleButtonUI() {
-			@Override
+			//@Override
 			protected Color getSelectColor() {
 				return new Color(44, 102, 110);
 			}
@@ -160,14 +173,23 @@ public class LoginPage extends JFrame{
 		passwordLB.setBounds(20, 115, 118, 28);
 		userLogin.getContentPane().add(passwordLB);
 		
+		emailLB = new JLabel("Email");
+		emailLB.setHorizontalAlignment(SwingConstants.CENTER);
+		emailLB.setFont(new Font("Tahoma", Font.BOLD, 14));
+		emailLB.setBounds(20, 145, 118, 28);
+		userLogin.getContentPane().add(emailLB);
+		
+		
+		
 		JButton signInBTN = new JButton("Sign In");
 		signInBTN.setBackground(new Color(240, 237, 238));
 		signInBTN.setForeground(new Color(10, 9, 12));
 		signInBTN.addActionListener(new ActionListener() {
-			@SuppressWarnings({ "deprecation" })
+			//@SuppressWarnings({ "deprecation" })
 			public void actionPerformed(ActionEvent e) {
 				String Username = usernameField.getText().toString();
 				String Password = String.valueOf(passwordField.getPassword());
+				String Email = emailField.getText().toString();
 				
 				int Type;
 				
@@ -183,7 +205,7 @@ public class LoginPage extends JFrame{
 					connection = ConnectDB.getConnection();
 					try {
 						// check user
-						String sql = "SELECT name, password, type FROM user_data";
+						String sql = "SELECT name, password, type, email FROM user_data";
 						PreparedStatement stmt = connection.prepareStatement(sql);
 						ResultSet results = stmt.executeQuery();
 						
@@ -191,8 +213,9 @@ public class LoginPage extends JFrame{
 							String uname = results.getString("name");
 							String upasswd = results.getString("password");
 							int utype = results.getInt("type");
+							String uemail = results.getString("email");
 
-							if(Username.equals(uname) && Password.equals(upasswd) && Type == utype) {
+							if(Username.equals(uname) && Password.equals(upasswd) && Type == utype && Email.equals(uemail)) {
 								check_login = true;
 								if(Type == 1) {
 									AdminPage adm = new AdminPage();
@@ -209,7 +232,7 @@ public class LoginPage extends JFrame{
 						
 						results.close();
 						if(!check_login) {
-							JOptionPane.showMessageDialog(null, "Username sau parola gresita.");
+							JOptionPane.showMessageDialog(null, "Detalii introduse incorect.");
 						}
 					} catch (SQLException e1) {
 						// handle errors
@@ -244,7 +267,8 @@ public class LoginPage extends JFrame{
 				
 				String Username = usernameField.getText().toString();
 				String Password = String.valueOf(passwordField.getPassword());
-				
+				String Email = emailField.getText().toString();
+						
 				int Type;
 				
 				if(!typeBTN.isSelected()) {
@@ -256,13 +280,21 @@ public class LoginPage extends JFrame{
 				
 				boolean format = true;
 				
+				String emailRegex = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
+
 				if(Username.isEmpty() || Password.isEmpty()) {
-					JOptionPane.showMessageDialog(null, "user and password format arent valid");
+					JOptionPane.showMessageDialog(null, "User and password format arent valid");
+					format = false;
+					return;
+				}
+				
+				if(!Email.matches(emailRegex)) {
+					JOptionPane.showMessageDialog(null, "Email format is not valid");
 					format = false;
 				}
 				
+				
 				if(format) {
-					
 					boolean check_login = true;
 	
 					Connection connection;
@@ -270,30 +302,42 @@ public class LoginPage extends JFrame{
 						connection = ConnectDB.getConnection();
 						try {
 							// check user
-							String sql = "SELECT name, password, type FROM user_data";
+							String sql = "SELECT name, password, type, email FROM user_data";
 							PreparedStatement stmt = connection.prepareStatement(sql);
 							ResultSet results = stmt.executeQuery();
 							
 							while(results.next()) {
 								String uname = results.getString("name");
 								String upasswd = results.getString("password");
+								String uemail = results.getString("email");
 								int utype = results.getInt("type");
 								
-								if(Username.equals(uname) && Password.equals(upasswd) && Type == utype) {
+								if(Username.equals(uname) && Password.equals(upasswd) && Type == utype && Email.equals(uemail)) {
 									check_login = false;
 									JOptionPane.showMessageDialog(null, "Contul exista deja.");
 								}
 							}
 							results.close();
 							if(check_login) {
-								String sql1 = "INSERT INTO user_data (name, password, type) VALUES (?, ?, ?)";
+								String sql1 = "INSERT INTO user_data (name, password, type, email) VALUES (?, ?, ?, ?)";
 								PreparedStatement stmt1 = connection.prepareStatement(sql1);
 								stmt1.setString(1, Username);
 								stmt1.setString(2, Password);
 								stmt1.setInt(3, Type);
+								stmt1.setString(4, Email);
 								stmt1.executeUpdate();
 								JOptionPane.showMessageDialog(null, "Cont nou creat");
 								
+								try {
+									new PythonScript(Email);
+								} catch (InterruptedException e1) {
+									// TODO Auto-generated catch block
+									e1.printStackTrace();
+								} catch (IOException e1) {
+									// TODO Auto-generated catch block
+									e1.printStackTrace();
+								}
+
 								if(Type == 1) {
 									AdminPage adm = new AdminPage();
 									adm.adminFrame.setVisible(true);
@@ -332,7 +376,8 @@ public class LoginPage extends JFrame{
 		userLogin.getContentPane().add(signUpBTN);
 		
 		typeBTN.setFont(new Font("Tahoma", Font.BOLD, 14));
-		typeBTN.setBounds(145, 145, 110, 28);
+		typeBTN.setBounds(145, 175, 110, 28);
 		userLogin.getContentPane().add(typeBTN);
+		
 	}
 }

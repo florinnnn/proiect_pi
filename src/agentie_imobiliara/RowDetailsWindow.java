@@ -57,8 +57,16 @@ public class RowDetailsWindow extends JFrame {
 		        @Override
 		        public void mouseClicked(MouseEvent e) {
 		            try {
-		                 
-		                Desktop.getDesktop().browse(new URI("https://www.google.com/maps/place/" + rowData[1]));
+		            	System.out.println(rowData[1]);
+		            	String[] address = ((String) rowData[1]).split("\\s+");
+		            	System.out.println(address);
+		            	String address_plus = "";
+		            	for (String word : address) {
+		            		System.out.println(word);
+		            		address_plus = address_plus + word + "+";
+		            	}
+		            	System.out.println(address_plus);
+		                Desktop.getDesktop().browse(new URI("https://www.google.com/maps/place/" + address_plus));
 		                 
 		            } catch (IOException | URISyntaxException e1) {
 		                e1.printStackTrace();
